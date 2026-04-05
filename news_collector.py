@@ -67,7 +67,56 @@ def fetch_news():
             print(f"抓取失败 {source['name']}: {e}")
     
     return all_news
-
+def fetch_news():
+    """抓取新闻"""
+    all_news = []
+    
+    for source in NEWS_SOURCES:
+        try:
+            print(f"\n🔍 开始抓取: {source['name']}")
+            print(f"   URL: {source['url']}")
+            
+            feed = feedparser.parse(source['url'])
+            
+            # 打印RSS解析结果
+            print(f"   解析结果: {len(feed.entries)} 条条目")
+            print(f"   解析状态: {feed.get('status', '未知')}")
+            
+            if hasattr(feed, 'bozo_exception') and feed.bozo_exception:
+                print(f"   ⚠️ 解析警告: {feed.bozo_exception}")
+            
+            for i, entry in enumerate(feed.entries[:3]):  # 只取前3条测试
+                title = entry.get('title', '无标题')
+                link = entry.get('link', '#')
+                published = entry.get('published', '未知时间')
+                
+                print(f"   条目{i+1}: {title[:50]}...")
+                
+                # 检查是否包含关键词
+                summary = entry.get('summary', '')
+                content = f"{title} {summary}".lower()
+                
+                keywords = KEYWORDS.get(source['category'], [])
+                has_keyword = any(keyword.lower() in content for keyword in keywords)
+                
+                if has_keyword:
+                    news_item = {
+                        'title': title,
+                        'link': link,
+                        'source': source['name'],
+                        'category': source['category'],
+                        'published': published,
+                        'summary': summary[:150] + '...' if len(summary) > 150 else summary
+                    }
+                    all_news.append(news_item)
+                    print(f"   ✅ 已添加: {title[:30]}...")
+                else:
+                    print(f"   ⏭️  跳过: 不包含关键词")
+                    
+        except Exception as e:
+            print(f"❌ 抓取失败 {source['name']}: {type(e).__name__} - {str(e)}")
+    
+    return all_news
 def create_email_content(news_list):
     """生成邮件内容"""
     if not news_list:
@@ -150,27 +199,45 @@ def main():
     # 1. 抓取新闻
     news_list = fetch_news()
     
-    if not news_list:
-        print("⚠️ 今日未找到相关新闻")
-        return
-    
-    print(f"✅ 共找到 {len(news_list)} 条相关新闻")
+    print(f"\n📊 抓取总结: 共找到 {len(news_list)} 条相关新闻")
     
     # 2. 生成邮件内容
-    email_subject = f"AI与低空经济每日资讯 ({datetime.now().strftime('%m-%d')})"
-    email_content = create_email_content(news_list)
+    if not news_list:
+        print("⚠️ 今日未找到相关新闻，发送测试邮件验证邮件功能")
+        email_subject = f"AI Agent测试邮件 ({datetime.now().strftime('%Y-%m-%d %H:%M')})"
+        email_content = """
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>📧 AI Agent测试邮件</h2>
+            <p>这是一封测试邮件，用于验证AI Agent的邮件发送功能。</p>
+            <p>发送时间: """ + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + """</p>
+            <p>状态: 新闻抓取返回0条，但邮件发送功能正常。</p>
+            <p>下一步: 请检查新闻源RSS地址是否有效。</p>
+        </body>
+        </html>
+        """
+    else:
+        email_subject = f"AI与低空经济每日资讯 ({datetime.now().strftime('%m-%d')})"
+        email_content = create_email_content(news_list)
     
     # 3. 发送邮件
+    print(f"\n📤 准备发送邮件...")
+    print(f"   主题: {email_subject}")
+    print(f"   发件人: {EMAIL_SENDER}")
+    print(f"   收件人: {EMAIL_RECEIVER}")
+    
     if EMAIL_PASSWORD:
-        success = send_email(email_subject, email_content)
-        if success:
-            print("🎉 任务完成！请检查您的邮箱。")
-        else:
-            print("❌ 任务失败，请检查配置。")
+        try:
+            success = send_email(email_subject, email_content)
+            if success:
+                print("✅ 邮件发送成功！请检查您的邮箱。")
+            else:
+                print("❌ 邮件发送失败")
+        except Exception as e:
+            print(f"❌ 邮件发送异常: {type(e).__name__} - {str(e)}")
     else:
-        print("⚠️ 未设置邮箱密码，仅生成内容预览")
-        print("\n" + "=" * 50)
-        print(email_content[:1000] + "..." if len(email_content) > 1000 else email_content)
-
-if __name__ == "__main__":
-    main()
+        print("⚠️ 未设置邮箱密码，跳过发送邮件")
+    
+    print("=" * 50)
+    print("任务完成")
+    print("=" * 50)
