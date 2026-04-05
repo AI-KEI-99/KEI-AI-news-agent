@@ -10,30 +10,6 @@ on:
 jobs:
   send-news:
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v3
-      
-    - name: 设置Python环境
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        
-    - name: 安装依赖
-      run: |
-        python -m pip install --upgrade pip
-        pip install feedparser
-        
-    - name: 运行新闻收集脚本
-      env:
-        EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
-      run: python news_collector.py
-jobs:
-  send-news:
-    runs-on: ubuntu-latest
     timeout-minutes: 5  # 增加超时时间
     
     steps:
