@@ -99,10 +99,12 @@ def fetch_news():
     # 使用多个备用新闻源，提高成功率
     news_sources = [
         # 国际源，通常可访问性更好
-        {'name': 'BBC Technology', 'url': 'http://feeds.bbci.co.uk/news/technology/rss.xml', 'category': '科技'},
+        {'name': 'Ars Technica', 'url': 'http://feeds.arstechnica.com/arstechnica/index', 'category': '科技'},
+        {'name': 'TechCrunch', 'url': 'https://techcrunch.com/feed/', 'category': '科技'},
         {'name': 'MIT News - AI', 'url': 'https://news.mit.edu/topic/artificial-intelligence2-rss.xml', 'category': 'AI'},
         # 低空经济相关（通过科技新闻过滤）
         {'name': 'TechCrunch', 'url': 'https://techcrunch.com/feed/', 'category': '科技'},
+        {'name': 'Drone Life', 'url': 'https://dronelife.com/feed/', 'category': '低空经济'},
     ]
 
     for source in news_sources:
@@ -122,7 +124,7 @@ def fetch_news():
             for entry in feed.entries[:5]:  # 每个源最多取5条
                 title = entry.get('title', '无标题')
                 # 简单的关键词过滤（您可以调整这里的关键词）
-                ai_keywords = ['AI', 'artificial intelligence', 'drone', '无人机', 'autonomous', '智能']
+                ai_keywords = ['AI', 'artificial intelligence', 'Machine Learning', 'drone', '无人机', 'autonomous','LLM', 'GPT', '模型', '算法',  'eVTOL', '空中交通','智能']
                 title_lower = title.lower()
                 if any(keyword.lower() in title_lower for keyword in ai_keywords):
                     news_item = {
@@ -175,7 +177,6 @@ def send_test_email():
         return False
 
 def main():
-    """主函数"""
     print("=" * 60)
     print("开始执行AI新闻收集任务")
     print("=" * 60)
@@ -183,17 +184,16 @@ def main():
     # 1. 抓取新闻
     news_list = fetch_news()
 
-    # 2. 无论是否有新闻，都发送邮件（测试功能）
-    if news_list:
-        # 如果有新闻，生成新闻邮件
-        email_subject = f"AI资讯日报 ({datetime.now().strftime('%m-%d')}) - {len(news_list)}条"
-        # 这里可以调用您原来的 create_email_content 函数
-        print(f"📨 准备发送包含 {len(news_list)} 条新闻的邮件...")
-        # 为了简化测试，先发送成功通知
-        send_test_email()
+    # 2. 根据有无新闻，发送不同类型的邮件
+    if news_list and len(news_list) > 0:
+        # 调用您之前写好的 create_email_content 函数，生成正式日报
+        email_subject = f"AI与低空经济日报 ({datetime.now().strftime('%m-%d')}) - {len(news_list)}条"
+        email_content = create_email_content(news_list)  # 请确保此函数存在并有效
+        print(f"📨 准备发送包含 {len(news_list)} 条新闻的正式日报...")
+        send_news_email(email_subject, email_content)  # 需将此函数改为正式发送函数
     else:
-        # 如果没新闻，发送测试邮件确认功能正常
-        print("⚠️ 今日未抓取到新闻，发送测试邮件验证邮件功能...")
+        # 如果确实没新闻，再发测试邮件或通知
+        print("⚠️ 今日未抓取到新闻，发送测试邮件验证功能...")
         send_test_email()
 
     print("=" * 60)
