@@ -1,3 +1,60 @@
+#!/usr/bin/env python3
+"""
+AI新闻收集脚本 - 调试版
+"""
+import sys
+import traceback
+import os
+from datetime import datetime
+
+print("=" * 60)
+print(f"📅 脚本开始执行: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"🐍 Python版本: {sys.version}")
+print("=" * 60)
+
+# 打印环境变量
+print("🔧 环境变量检查:")
+print(f"   EMAIL_SENDER: {'✓ 已设置' if os.environ.get('EMAIL_SENDER') else '✗ 未设置'}")
+print(f"   EMAIL_PASSWORD: {'✓ 已设置' if os.environ.get('EMAIL_PASSWORD') else '✗ 未设置'}")
+print(f"   EMAIL_RECEIVER: {'✓ 已设置' if os.environ.get('EMAIL_RECEIVER') else '✗ 未设置'}")
+print("-" * 40)
+
+try:
+    # 测试导入模块
+    print("📦 导入模块...")
+    import feedparser
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    print("✅ 所有模块导入成功")
+    
+    # 这里是您原有的新闻收集代码
+    # 请确保这里不会因为条件判断而提前return或exit
+    
+    # 示例：简单的测试代码
+    print("🧪 执行简单测试...")
+    test_sources = [
+        {'name': 'OpenAI官方博客', 'url': 'https://openai.com/blog/rss/', 'category': 'AI'},
+    ]
+    
+    for source in test_sources:
+        print(f"   🔍 尝试抓取: {source['name']}")
+        feed = feedparser.parse(source['url'])
+        print(f"     找到 {len(feed.entries)} 条条目")
+    
+    print("🎉 测试完成！")
+    
+except Exception as e:
+    print(f"❌ 发生错误: {type(e).__name__}")
+    print(f"   错误信息: {str(e)}")
+    print("🔍 错误堆栈:")
+    traceback.print_exc()
+    sys.exit(1)
+
+print("=" * 60)
+print("✅ 脚本执行完成")
+print("=" * 60)
 import feedparser
 import smtplib
 from email.mime.text import MIMEText
