@@ -101,7 +101,6 @@ def fetch_news():
         # 国际源，通常可访问性更好
         {'name': 'Ars Technica', 'url': 'http://feeds.arstechnica.com/arstechnica/index', 'category': '科技'},
         {'name': 'TechCrunch', 'url': 'https://techcrunch.com/feed/', 'category': '科技'},
-        {'name': 'MIT News - AI', 'url': 'https://news.mit.edu/topic/artificial-intelligence2-rss.xml', 'category': 'AI'},
         # 低空经济相关（通过科技新闻过滤）
         {'name': 'TechCrunch', 'url': 'https://techcrunch.com/feed/', 'category': '科技'},
         {'name': 'Drone Life', 'url': 'https://dronelife.com/feed/', 'category': '低空经济'},
@@ -175,7 +174,82 @@ def send_test_email():
     except Exception as e:
         print(f"❌ 测试邮件发送失败: {type(e).__name__} - {str(e)}")
         return False
+def create_email_content(news_list):
+    """根据新闻列表生成HTML邮件内容"""
+    if not news_list:
+        return "<p>今日未抓取到相关新闻。</p>"
 
+    # 按新闻来源简单分组
+    from collections import defaultdict
+    news_by_source = defaultdict(list)
+    for news in news_list:
+        news_by_source[news['source']].append(news)
+
+    # 开始构建HTML
+    html_content = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: auto; padding: 20px; }}
+            .header {{ background-color: #f0f8ff; padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: center; }}
+            .news-item {{ border-left: 4px solid #4CAF50; padding: 15px; margin-bottom: 20px; background-color: #f9f9f9; border-radius: 0 8px 8px 0; }}
+            .news-title {{ font-size: 18px; font-weight: bold; margin-bottom: 8px; }}
+            .news-title a {{ color: #1a73e8; text-decoration: none; }}
+            .news-title a:hover {{ text-decoration: underline; }}
+            .news-meta {{ color: #666; font-size: 14px; margin-bottom: 10px; }}
+            .news-summary {{ color: #444; }}
+            .source-section {{ margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ddd; }}
+            .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #777; font-size: 12px; text-align: center; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h2>🚀 AI与低空经济 每日资讯简报</h2>
+            <p>📅 {datetime.now().strftime('%Y年%m月%d日')} | 📰 共 {len(news_list)} 条更新</p>
+        </div>
+    """
+
+    # 为每个来源添加新闻
+    for source, items in news_by_source.items():
+        html_content += f'<div class="source-section"><h3>📋 来源：{source}</h3>'
+        for i, news in enumerate(items, 1):
+            html_content += f"""
+            <div class="news-item">
+                <div class="news-title">{i}. <a href="{news['link']}" target="_blank">{news['title']}</a></div>
+                <div class="news-meta">⏰ {news.get('published', '时间未知')}</div>
+                <div class="news-summary">{news.get('summary', '暂无摘要')}</div>
+            </div>
+            """
+        html_content += '</div>'
+
+    html_content += """
+        <div class="footer">
+            <p>本简报由 GitHub Actions 自动生成 | 资讯源自公开 RSS 订阅</p>
+            <p>如需调整订阅源或反馈，请访问您的仓库设置。</p>
+        </div>
+    </body>
+    </html>
+    """
+    return html_content
+
+def send_news_email(subject, html_content):
+    """发送正式的新闻邮件"""
+    try:
+        print(f"正在发送新闻邮件，主题: {subject}")
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = EMAIL_SENDER
+        msg['To'] = EMAIL_RECEIVER
+        msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=30) as server:
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.send_message(msg)
+        print("✅ 新闻邮件发送成功！")
+        return True
+    except Exception as e:
+        print(f"❌ 新闻邮件发送失败: {type(e).__name__} - {e}")
+        return False
 def main():
     print("=" * 60)
     print("开始执行AI新闻收集任务")
@@ -186,15 +260,16 @@ def main():
 
     # 2. 根据有无新闻，发送不同类型的邮件
     if news_list and len(news_list) > 0:
-        # 调用您之前写好的 create_email_content 函数，生成正式日报
+        # 生成正式日报
         email_subject = f"AI与低空经济日报 ({datetime.now().strftime('%m-%d')}) - {len(news_list)}条"
-        email_content = create_email_content(news_list)  # 请确保此函数存在并有效
+        email_content = create_email_content(news_list)  # 现在这个函数已定义，可以调用了
         print(f"📨 准备发送包含 {len(news_list)} 条新闻的正式日报...")
-        send_news_email(email_subject, email_content)  # 需将此函数改为正式发送函数
+        send_news_email(email_subject, email_content)    # 改为调用正式的发送函数
     else:
-        # 如果确实没新闻，再发测试邮件或通知
-        print("⚠️ 今日未抓取到新闻，发送测试邮件验证功能...")
-        send_test_email()
+        # 如果确实没新闻，可以保留测试邮件或发送一个通知
+        print("⚠️ 今日未抓取到相关新闻。")
+        # 可以选择不发送邮件，或者发送一个简短通知
+        # send_test_email() # 可以注释掉或保留
 
     print("=" * 60)
     print("任务执行完毕")
